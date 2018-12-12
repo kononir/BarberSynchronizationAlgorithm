@@ -7,32 +7,49 @@
 #define NUMBER_OF_BARBERS 1
 #define WORKING_TIME 5000
 #define TIME_BETWEEN_CUSTOMERS 1000
+#define MAX_NUMBER_OF_CUSTOMERS 1000
 
 using namespace std;
 
-int numOfWaitingCustomers = 0;
-
 HANDLE hCustomers;
-HANDLE hBarber;
-HANDLE hWaiting;
+HANDLE hQueueAccess;
+
+typedef struct customersQueuePlace
+{
+	int customerIndex;
+	bool freeFlag;
+	HANDLE hPermition;
+} customersQueuePlace;
+
+vector<customersQueuePlace> customersQueue;
 
 unsigned __stdcall barber(void* pArguments) {
+	vector<customersQueuePlace>::iterator iter = customersQueue.begin();
+	while (iter != customersQueue.end()) {
+		WaitForSingleObject((*iter).hPermition, INFINITE);
+		iter++;
+	}
+
 	while (true) {
-		cout << "Barber is waiting customer (sleep)\n";
+		printf("Barber wants to invite next customer\n");
 		WaitForSingleObject(hCustomers, INFINITE);
 
-		WaitForSingleObject(hWaiting, INFINITE);
-		cout << "Barber is getting access to number of waiting customers\n";
+		printf("Barber is checking queue\n");
+		WaitForSingleObject(hQueueAccess, INFINITE);
 
-		numOfWaitingCustomers--;
+		printf("Barber invites customer\n");
+		ReleaseMutex(customersQueue.front().hPermition);
 
-		ReleaseSemaphore(hBarber, 1, NULL);
-		cout << "Barber is ready to work\n";
-
-		ReleaseMutex(hWaiting);
-
-		cout << "Barber is working\n";
+		printf("Barber is working\n");
 		Sleep(WORKING_TIME);
+
+		WaitForSingleObject(customersQueue.front().hPermition, INFINITE);
+
+		// здесь должны переставить 
+
+		ReleaseMutex(hQueueAccess);
+
+		ReleaseSemaphore(hCustomers, 1, NULL);
 	}
 
 	_endthreadex(0);
@@ -42,73 +59,100 @@ unsigned __stdcall barber(void* pArguments) {
 unsigned __stdcall customer(void* pArguments) {
 	int currentIndex = (int)pArguments;
 
-	cout << "Customer " << currentIndex << " is coming\n";
+	printf("Customer %d is coming and checking queue\n", currentIndex);
 
-	WaitForSingleObject(hWaiting, INFINITE);
+	if (ReleaseSemaphore(hCustomers, 1, NULL)) {
+		WaitForSingleObject(hQueueAccess, INFINITE);
 
-	if (numOfWaitingCustomers < NUMBER_OF_CHAIRS) {
-		numOfWaitingCustomers++;
+		printf("Customer %d is getting place in queue\n", currentIndex);
 
-		ReleaseSemaphore(hCustomers, 1, NULL);
+		vector<customersQueuePlace>::iterator iter = customersQueue.begin();
+		while ((*iter).freeFlag == true) {
+			iter++;
+		}
 
-		cout << "Customer " << currentIndex << " is getting place in queue\n";
+		(*iter).freeFlag = false;
+		(*iter).customerIndex = currentIndex;
 
-		ReleaseMutex(hWaiting);
+		WaitForSingleObject((*iter).hPermition, INFINITE);
 
-		WaitForSingleObject(hBarber, INFINITE);
-
-		cout << "Customer " << currentIndex << " is getting haircut\n";
-
+		printf("Customer %d is getting haircut\n", currentIndex);
 		Sleep(WORKING_TIME);
+
+		ReleaseMutex((*iter).hPermition);
+
+		ReleaseMutex(hQueueAccess);
 	}
 	else {
-		ReleaseMutex(hWaiting);
+		printf("All chairs are filled\n");
 	}
 
-	cout << "Customer " << currentIndex << " is leaving barber shop\n";
+	printf("Customer %d is leaving barber shop\n", currentIndex);
 
 	_endthreadex(0);
 	return 0;
 }
 
-int main(int argc, char *argv[])
+int main()
 {
-	//int numOfCustomers = atoi(argv[0]);
-
 	int numOfCustomers;
 
-	cout << "Input number of customers: ";
-	cin >> numOfCustomers;
-	
-	hCustomers = CreateSemaphore(NULL, 0, numOfCustomers, NULL);
-	hBarber = CreateSemaphore(NULL, 0, NUMBER_OF_BARBERS, NULL);
-	hWaiting = CreateMutex(NULL, FALSE, NULL);
+	do {
+		cout << "Input number of customers: ";
+		cin >> numOfCustomers;
+	} while (numOfCustomers > MAX_NUMBER_OF_CUSTOMERS);
+
+	hCustomers = CreateSemaphore(NULL, 0, NUMBER_OF_CHAIRS, NULL);
+	hQueueAccess = CreateMutex(NULL, FALSE, NULL);
+
+	customersQueue.reserve(numOfCustomers);
+	for (int placeIndex = 0; placeIndex < numOfCustomers; placeIndex++) {
+		HANDLE hPermition = CreateMutex(NULL, FALSE, NULL);
+
+		customersQueuePlace place = { 0, false, hPermition };
+		customersQueue.push_back(place);
+	}
 
 	HANDLE hBarberThread = (HANDLE)_beginthreadex(NULL, 0, &barber, NULL, 0, NULL);
 
-	vector<HANDLE> customerHandles(numOfCustomers);
+	vector<HANDLE> customerThreads(numOfCustomers);
 
 	int currCustomerIndex = 0;
+
+	// ограничить количество потоков!
 
 	while (!_kbhit()) {
 		Sleep(TIME_BETWEEN_CUSTOMERS);
 
-		customerHandles.push_back((HANDLE)_beginthreadex(NULL, 0, &customer, (void*)currCustomerIndex, 0, NULL));
+		for (int customerThreadIndex = 0; customerThreadIndex < numOfCustomers; customerThreadIndex++) {
+			DWORD isStillActive;
+			
+			GetExitCodeThread(customerThreads[customerThreadIndex], &isStillActive);
 
-		currCustomerIndex++;
+			if (isStillActive != STILL_ACTIVE) {
+				CloseHandle(customerThreads[customerThreadIndex]);
+
+				customerThreads[customerThreadIndex] = (HANDLE)_beginthreadex(NULL, 0, &customer, (void*)currCustomerIndex, 0, NULL);
+
+				currCustomerIndex++;
+
+				break;
+			}
+		}
 	}
 
-	for (vector<HANDLE>::iterator iter = customerHandles.begin(); iter != customerHandles.end(); iter++) {
+	for (vector<HANDLE>::iterator iter = customerThreads.begin(); iter != customerThreads.end(); iter++) {
+		WaitForSingleObject((*iter), INFINITE);
+
 		CloseHandle(*iter);
 	}
 
 	CloseHandle(hBarberThread);
 
 	CloseHandle(hCustomers);
-	CloseHandle(hBarber);
-	CloseHandle(hWaiting);
+	CloseHandle(hQueueAccess);
 
-	system("pause");
+	system("pause"); // разобраться, почему определяет как ошибку
 
 	return 0;
 }
