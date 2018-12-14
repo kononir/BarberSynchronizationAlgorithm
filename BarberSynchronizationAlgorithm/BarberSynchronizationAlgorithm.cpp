@@ -4,7 +4,6 @@
 #include "pch.h"
 
 #define NUMBER_OF_CHAIRS 3
-#define NUMBER_OF_BARBERS 1
 #define WORKING_TIME 5000
 #define TIME_BETWEEN_CUSTOMERS 1000
 #define MAX_NUMBER_OF_CUSTOMERS 1000
@@ -52,7 +51,7 @@ unsigned __stdcall barber(void* pArguments) {
 		ReleaseSemaphore(hCustomers, 1, NULL);
 	}
 
-	_endthreadex(0);
+	_endthread();
 	return 0;
 }
 
@@ -89,7 +88,7 @@ unsigned __stdcall customer(void* pArguments) {
 
 	printf("Customer %d is leaving barber shop\n", currentIndex);
 
-	_endthreadex(0);
+	_endthread();
 	return 0;
 }
 
@@ -105,7 +104,6 @@ int main()
 	hCustomers = CreateSemaphore(NULL, 0, NUMBER_OF_CHAIRS, NULL);
 	hQueueAccess = CreateMutex(NULL, FALSE, NULL);
 
-	customersQueue.resize(numOfCustomers);
 	for (int placeIndex = 0; placeIndex < numOfCustomers; placeIndex++) {
 		HANDLE hPermition = CreateMutex(NULL, FALSE, NULL);
 
@@ -113,41 +111,15 @@ int main()
 		customersQueue.push_back(place);
 	}
 
-	HANDLE hBarberThread = (HANDLE)_beginthreadex(NULL, 0, &barber, NULL, 0, NULL);
+	HANDLE hBarber = (HANDLE)_beginthread(&barber, 0, NULL);
 
-	vector<HANDLE> customerThreads(numOfCustomers);
-
-	int currCustomerIndex = 0;
-
-	// ограничить количество потоков!
-
-	while (!_kbhit()) {
+	for (int currCustomerIndex = 0; currCustomerIndex < numOfCustomers; currCustomerIndex++) {
 		Sleep(TIME_BETWEEN_CUSTOMERS);
-
-		for (int customerThreadIndex = 0; customerThreadIndex < numOfCustomers; customerThreadIndex++) {
-			DWORD isStillActive;
-			
-			GetExitCodeThread(customerThreads[customerThreadIndex], &isStillActive);
-
-			if (isStillActive != STILL_ACTIVE) {
-				CloseHandle(customerThreads[customerThreadIndex]);
-
-				customerThreads[customerThreadIndex] = (HANDLE)_beginthreadex(NULL, 0, &customer, (void*)currCustomerIndex, 0, NULL);
-
-				currCustomerIndex++;
-
-				break;
-			}
-		}
+		
+		_beginthread(&customer, 0, (void*)currCustomerIndex);
 	}
-
-	for (vector<HANDLE>::iterator iter = customerThreads.begin(); iter != customerThreads.end(); iter++) {
-		WaitForSingleObject((*iter), INFINITE);
-
-		CloseHandle(*iter);
-	}
-
-	CloseHandle(hBarberThread);
+	
+	WaitForSingleObject(hBarber);
 
 	CloseHandle(hCustomers);
 	CloseHandle(hQueueAccess);
