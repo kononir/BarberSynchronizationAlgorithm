@@ -21,10 +21,10 @@ typedef struct customersQueuePlace
 	HANDLE hPermition;
 } customersQueuePlace;
 
-vector<customersQueuePlace> customersQueue;
+deque<customersQueuePlace> customersQueue;
 
 unsigned __stdcall barber(void* pArguments) {
-	vector<customersQueuePlace>::iterator iter = customersQueue.begin();
+	deque<customersQueuePlace>::iterator iter = customersQueue.begin();
 	while (iter != customersQueue.end()) {
 		WaitForSingleObject((*iter).hPermition, INFINITE);
 		iter++;
@@ -33,8 +33,6 @@ unsigned __stdcall barber(void* pArguments) {
 	while (true) {
 		printf("Barber wants to invite next customer\n");
 		WaitForSingleObject(hCustomers, INFINITE);
-
-		printf("Barber is checking queue\n");
 		WaitForSingleObject(hQueueAccess, INFINITE);
 
 		printf("Barber invites customer\n");
@@ -45,7 +43,9 @@ unsigned __stdcall barber(void* pArguments) {
 
 		WaitForSingleObject(customersQueue.front().hPermition, INFINITE);
 
-		// здесь должны переставить 
+		customersQueuePlace rearrangingPlace = customersQueue.front();
+		customersQueue.pop_front();
+		customersQueue.push_front(rearrangingPlace);
 
 		ReleaseMutex(hQueueAccess);
 
@@ -66,7 +66,7 @@ unsigned __stdcall customer(void* pArguments) {
 
 		printf("Customer %d is getting place in queue\n", currentIndex);
 
-		vector<customersQueuePlace>::iterator iter = customersQueue.begin();
+		deque<customersQueuePlace>::iterator iter = customersQueue.begin();
 		while ((*iter).freeFlag == true) {
 			iter++;
 		}
@@ -105,7 +105,7 @@ int main()
 	hCustomers = CreateSemaphore(NULL, 0, NUMBER_OF_CHAIRS, NULL);
 	hQueueAccess = CreateMutex(NULL, FALSE, NULL);
 
-	customersQueue.reserve(numOfCustomers);
+	customersQueue.resize(numOfCustomers);
 	for (int placeIndex = 0; placeIndex < numOfCustomers; placeIndex++) {
 		HANDLE hPermition = CreateMutex(NULL, FALSE, NULL);
 
@@ -152,7 +152,7 @@ int main()
 	CloseHandle(hCustomers);
 	CloseHandle(hQueueAccess);
 
-	system("pause"); // разобраться, почему определяет как ошибку
+	system("pause");
 
 	return 0;
 }

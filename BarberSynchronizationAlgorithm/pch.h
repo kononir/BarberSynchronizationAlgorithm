@@ -14,5 +14,6 @@
 #include <conio.h>
 #include <iostream>
 #include <vector>
+#include <deque>
 
 #endif //PCH_H
