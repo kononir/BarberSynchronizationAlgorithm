@@ -73,12 +73,12 @@ unsigned __stdcall barber(void* pArguments) {
 
 
 
-		WaitForSingleObject(hPermitionsAccess, INFINITE);
+		//WaitForSingleObject(hPermitionsAccess, INFINITE);
 
 		ReleaseMutex(hPermitions[0]);
 		WaitForSingleObject(hPermitions[0], INFINITE);
 
-		ReleaseMutex(hPermitionsAccess);
+		//ReleaseMutex(hPermitionsAccess);
 
 
 
@@ -87,7 +87,7 @@ unsigned __stdcall barber(void* pArguments) {
 
 		
 
-		WaitForSingleObject(hPermitionsAccess, INFINITE);
+		//WaitForSingleObject(hPermitionsAccess, INFINITE);
 
 		// сдвиг очереди
 		HANDLE firstPermition = hPermitions[0];
@@ -96,7 +96,7 @@ unsigned __stdcall barber(void* pArguments) {
 		};
 		hPermitions[NUMBER_OF_CHAIRS - 1] = firstPermition;
 
-		ReleaseMutex(hPermitionsAccess);
+		//ReleaseMutex(hPermitionsAccess);
 
 
 
@@ -123,21 +123,16 @@ unsigned __stdcall customer(void* pArguments) {
 
 			WaitForSingleObject(hPermitionsAccess, INFINITE);
 
-			int rezultOfWaiting = (int)WaitForMultipleObjects(NUMBER_OF_CHAIRS, hPermitions, FALSE, INFINITE);	// ошибка с захватом мьютекса, который должен быть захвачен др. парикмахером
-			int permitionIndex = rezultOfWaiting - (int)WAIT_OBJECT_0 + 1;
-
+			int rezultOfWaiting = (int)WaitForMultipleObjects(NUMBER_OF_CHAIRS, hPermitions, FALSE, INFINITE);	// ошибка с захватом мьютекса, который должен быть уже захвачен парикмахером
+			int permitionIndex = rezultOfWaiting - (int)WAIT_OBJECT_0;
+			ReleaseMutex(hPermitions[permitionIndex]);
+			
 			ReleaseMutex(hPermitionsAccess);
 
 
-
-			WaitForSingleObject(hPermitionsAccess, INFINITE);
 
 			logingCustomer("Customer %d is getting haircut\n", currentIndex);
 			Sleep(WORKING_TIME);
-
-			ReleaseMutex(hPermitions[permitionIndex]);
-
-			ReleaseMutex(hPermitionsAccess);
 
 			break;
 		}
@@ -178,9 +173,9 @@ int main()
 	hPermitionsAccess = CreateMutex(NULL, FALSE, NULL);
 	hCurrCustomerN = CreateMutex(NULL, FALSE, NULL);
 
-	hPermitions = new HANDLE[numOfCustomers];
+	hPermitions = new HANDLE[NUMBER_OF_CHAIRS];
 
-	for (int placeIndex = 0; placeIndex < numOfCustomers; placeIndex++) {
+	for (int placeIndex = 0; placeIndex < NUMBER_OF_CHAIRS; placeIndex++) {
 		hPermitions[placeIndex] = CreateMutex(NULL, FALSE, NULL);
 	}
 

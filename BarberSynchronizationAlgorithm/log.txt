@@ -1,12 +1,51 @@
-23:37:42.831   Barber is coming
-23:37:43.501   Customer 0 is coming and checking queue
-23:37:43.501   Customer 0 is getting place in queue
-23:37:43.501   Barber invites customer
-23:37:43.501   Customer 0 is getting haircut
-23:37:43.622   Customer 1 is coming and checking queue
-23:37:43.622   Customer 1 is getting place in queue
-23:37:48.505   Customer 0 is leaving barber shop
-23:37:48.505   Barber is working
-23:37:48.505   Customer 1 is getting haircut
-23:37:53.518   Customer 1 is leaving barber shop
-23:37:53.518   Barber is free
+01:25:17.775   Barber is coming
+01:25:17.899   Customer 0 is coming and checking queue
+01:25:17.899   Customer 0 is getting place in queue
+01:25:17.899   Barber invites customer
+01:25:17.899   Customer 0 is getting haircut
+01:25:17.899   Barber is working
+01:25:18.118   Customer 1 is coming and checking queue
+01:25:18.118   Customer 1 is getting place in queue
+01:25:19.024   Customer 2 is coming and checking queue
+01:25:19.024   Customer 2 is getting place in queue
+01:25:19.992   Customer 3 is coming and checking queue
+01:25:19.992   Customer 3 is getting place in queue
+01:25:20.759   Customer 4 is coming and checking queue
+01:25:21.383   Customer 5 is coming and checking queue
+01:25:21.634   Customer 6 is coming and checking queue
+01:25:21.771   All chairs are filled
+01:25:21.771   Customer 4 is leaving barber shop
+01:25:22.303   Customer 7 is coming and checking queue
+01:25:22.396   All chairs are filled
+01:25:22.396   Customer 5 is leaving barber shop
+01:25:22.646   All chairs are filled
+01:25:22.646   Customer 6 is leaving barber shop
+01:25:22.708   Customer 8 is coming and checking queue
+01:25:22.912   Customer 0 is leaving barber shop
+01:25:22.912   Barber is free
+01:25:22.912   Barber invites customer
+01:25:22.912   Customer 8 is getting place in queue
+01:25:22.912   Customer 1 is getting haircut
+01:25:22.912   Barber is working
+01:25:23.177   Customer 9 is coming and checking queue
+01:25:23.318   All chairs are filled
+01:25:23.318   Customer 7 is leaving barber shop
+01:25:24.191   All chairs are filled
+01:25:24.191   Customer 9 is leaving barber shop
+01:25:27.926   Customer 1 is leaving barber shop
+01:25:27.926   Barber is free
+01:25:27.926   Barber invites customer
+01:25:27.926   Customer 2 is getting haircut
+01:25:27.926   Barber is working
+01:25:32.939   Customer 2 is leaving barber shop
+01:25:32.939   Barber is free
+01:25:32.939   Barber invites customer
+01:25:32.939   Customer 8 is getting haircut
+01:25:32.939   Barber is working
+01:25:37.949   Customer 8 is leaving barber shop
+01:25:37.949   Barber is free
+01:25:37.949   Barber invites customer
+01:25:37.949   Customer 3 is getting haircut
+01:25:37.949   Barber is working
+01:25:42.957   Customer 3 is leaving barber shop
+01:25:42.957   Barber is free
