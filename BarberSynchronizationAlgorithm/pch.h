@@ -13,7 +13,6 @@
 #include <process.h>
 #include <conio.h>
 #include <iostream>
-#include <vector>
-#include <deque>
+#include <ctime>
 
 #endif //PCH_H

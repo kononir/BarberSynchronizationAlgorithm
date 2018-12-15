@@ -11,44 +11,96 @@
 using namespace std;
 
 HANDLE hCustomers;
-HANDLE hQueueAccess;
+HANDLE hPermitionsAccess;
+HANDLE* hPermitions;
+HANDLE hLogger;
+HANDLE hCurrCustomerN;
 
-typedef struct customersQueuePlace
+int currCustomerN = 0;
+FILE* stream;
+
+void printTimeStamp()
 {
-	int customerIndex;
-	bool freeFlag;
-	HANDLE hPermition;
-} customersQueuePlace;
+	SYSTEMTIME timeStamp; // Текущее время. 
+	GetLocalTime(&timeStamp); // Определить текущее время. 
+	printf("%02d:%02d:%02d.%03d   ", // Вывести текущее время на экран. 
+		timeStamp.wHour, timeStamp.wMinute,
+		timeStamp.wSecond, timeStamp.wMilliseconds);
+	fprintf(stream, "%02d:%02d:%02d.%03d   ", // Записать текущее время в файл. 
+		timeStamp.wHour, timeStamp.wMinute,
+		timeStamp.wSecond, timeStamp.wMilliseconds);
+}
 
-deque<customersQueuePlace> customersQueue;
+void logingBarber(const char* text) {
+	WaitForSingleObject(hLogger, INFINITE);
+	printTimeStamp();
+	printf(text);
+	fprintf(stream, text);
+	ReleaseMutex(hLogger);
+}
+
+void logingCustomer(const char* text, int customerIndex) {
+	WaitForSingleObject(hLogger, INFINITE);
+	printTimeStamp();
+	printf(text, customerIndex);
+	fprintf(stream, text, customerIndex);
+	ReleaseMutex(hLogger);
+}
 
 unsigned __stdcall barber(void* pArguments) {
-	deque<customersQueuePlace>::iterator iter = customersQueue.begin();
-	while (iter != customersQueue.end()) {
-		WaitForSingleObject((*iter).hPermition, INFINITE);
-		iter++;
-	}
+	WaitForMultipleObjects(NUMBER_OF_CHAIRS, hPermitions, TRUE, INFINITE);
+
+	int numOfCustomers = (int)pArguments;
+
+	logingBarber("Barber is coming\n");
 
 	while (true) {
-		printf("Barber wants to invite next customer\n");
-		WaitForSingleObject(hCustomers, INFINITE);
-		WaitForSingleObject(hQueueAccess, INFINITE);
+		WaitForSingleObject(hCurrCustomerN, INFINITE);
 
-		printf("Barber invites customer\n");
-		ReleaseMutex(customersQueue.front().hPermition);
+		if (currCustomerN == numOfCustomers) {
+			break;
+		}
 
-		printf("Barber is working\n");
+		ReleaseMutex(hCurrCustomerN);
+
+
+
+		if (!ReleaseSemaphore(hCustomers, 1, NULL)) {
+			continue;
+		}
+		
+		logingBarber("Barber invites customer\n");	
+
+
+
+		WaitForSingleObject(hPermitionsAccess, INFINITE);
+
+		ReleaseMutex(hPermitions[0]);
+		WaitForSingleObject(hPermitions[0], INFINITE);
+
+		ReleaseMutex(hPermitionsAccess);
+
+
+
+		logingBarber("Barber is working\n");
 		Sleep(WORKING_TIME);
 
-		WaitForSingleObject(customersQueue.front().hPermition, INFINITE);
+		
 
-		customersQueuePlace rearrangingPlace = customersQueue.front();
-		customersQueue.pop_front();
-		customersQueue.push_front(rearrangingPlace);
+		WaitForSingleObject(hPermitionsAccess, INFINITE);
 
-		ReleaseMutex(hQueueAccess);
+		// сдвиг очереди
+		HANDLE firstPermition = hPermitions[0];
+		for (int permitionIndex = 1; permitionIndex > NUMBER_OF_CHAIRS; permitionIndex++) {
+			hPermitions[permitionIndex - 1] = hPermitions[permitionIndex];
+		};
+		hPermitions[NUMBER_OF_CHAIRS - 1] = firstPermition;
 
-		ReleaseSemaphore(hCustomers, 1, NULL);
+		ReleaseMutex(hPermitionsAccess);
+
+
+
+		logingBarber("Barber is free\n");
 	}
 
 	_endthread();
@@ -58,35 +110,51 @@ unsigned __stdcall barber(void* pArguments) {
 unsigned __stdcall customer(void* pArguments) {
 	int currentIndex = (int)pArguments;
 
-	printf("Customer %d is coming and checking queue\n", currentIndex);
+	logingCustomer("Customer %d is coming and checking queue\n", currentIndex);
 
-	if (ReleaseSemaphore(hCustomers, 1, NULL)) {
-		WaitForSingleObject(hQueueAccess, INFINITE);
+	DWORD decision = WaitForSingleObject(hCustomers, 1000);
 
-		printf("Customer %d is getting place in queue\n", currentIndex);
+	switch (decision) {
+		case WAIT_OBJECT_0:
+		{
+			logingCustomer("Customer %d is getting place in queue\n", currentIndex);
 
-		deque<customersQueuePlace>::iterator iter = customersQueue.begin();
-		while ((*iter).freeFlag == true) {
-			iter++;
+
+
+			WaitForSingleObject(hPermitionsAccess, INFINITE);
+
+			int rezultOfWaiting = (int)WaitForMultipleObjects(NUMBER_OF_CHAIRS, hPermitions, FALSE, INFINITE);	// ошибка с захватом мьютекса, который должен быть захвачен др. парикмахером
+			int permitionIndex = rezultOfWaiting - (int)WAIT_OBJECT_0 + 1;
+
+			ReleaseMutex(hPermitionsAccess);
+
+
+
+			WaitForSingleObject(hPermitionsAccess, INFINITE);
+
+			logingCustomer("Customer %d is getting haircut\n", currentIndex);
+			Sleep(WORKING_TIME);
+
+			ReleaseMutex(hPermitions[permitionIndex]);
+
+			ReleaseMutex(hPermitionsAccess);
+
+			break;
 		}
 
-		(*iter).freeFlag = false;
-		(*iter).customerIndex = currentIndex;
+		case WAIT_TIMEOUT:
+		{
+			logingCustomer("All chairs are filled\n", currentIndex);
 
-		WaitForSingleObject((*iter).hPermition, INFINITE);
-
-		printf("Customer %d is getting haircut\n", currentIndex);
-		Sleep(WORKING_TIME);
-
-		ReleaseMutex((*iter).hPermition);
-
-		ReleaseMutex(hQueueAccess);
-	}
-	else {
-		printf("All chairs are filled\n");
+			break;
+		}
 	}
 
-	printf("Customer %d is leaving barber shop\n", currentIndex);
+	logingCustomer("Customer %d is leaving barber shop\n", currentIndex);
+
+	WaitForSingleObject(hCurrCustomerN, INFINITE);
+	currCustomerN++;
+	ReleaseMutex(hCurrCustomerN);
 
 	_endthread();
 	return 0;
@@ -101,28 +169,37 @@ int main()
 		cin >> numOfCustomers;
 	} while (numOfCustomers > MAX_NUMBER_OF_CUSTOMERS);
 
-	hCustomers = CreateSemaphore(NULL, 0, NUMBER_OF_CHAIRS, NULL);
-	hQueueAccess = CreateMutex(NULL, FALSE, NULL);
+	srand((int)time(NULL));
+
+	fopen_s(&stream, "log.txt", "w");
+	hLogger = CreateMutex(NULL, FALSE, NULL);
+
+	hCustomers = CreateSemaphore(NULL, NUMBER_OF_CHAIRS, NUMBER_OF_CHAIRS, NULL);
+	hPermitionsAccess = CreateMutex(NULL, FALSE, NULL);
+	hCurrCustomerN = CreateMutex(NULL, FALSE, NULL);
+
+	hPermitions = new HANDLE[numOfCustomers];
 
 	for (int placeIndex = 0; placeIndex < numOfCustomers; placeIndex++) {
-		HANDLE hPermition = CreateMutex(NULL, FALSE, NULL);
-
-		customersQueuePlace place = { 0, false, hPermition };
-		customersQueue.push_back(place);
+		hPermitions[placeIndex] = CreateMutex(NULL, FALSE, NULL);
 	}
 
-	HANDLE hBarber = (HANDLE)_beginthread(&barber, 0, NULL);
+	HANDLE hBarber = (HANDLE)_beginthread((_beginthread_proc_type)barber, 0, (void*)numOfCustomers);
 
-	for (int currCustomerIndex = 0; currCustomerIndex < numOfCustomers; currCustomerIndex++) {
-		Sleep(TIME_BETWEEN_CUSTOMERS);
+	int currCustomerIndex = 0;
+
+	while (currCustomerIndex < numOfCustomers) {
+		Sleep(rand() % TIME_BETWEEN_CUSTOMERS);
 		
-		_beginthread(&customer, 0, (void*)currCustomerIndex);
+		_beginthread((_beginthread_proc_type)customer, 0, (void*)currCustomerIndex);
+
+		currCustomerIndex++;
 	}
 	
-	WaitForSingleObject(hBarber);
+	WaitForSingleObject(hBarber, INFINITE);
 
 	CloseHandle(hCustomers);
-	CloseHandle(hQueueAccess);
+	CloseHandle(hPermitionsAccess);
 
 	system("pause");
 

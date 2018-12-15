@@ -1,0 +1,12 @@
+23:37:42.831   Barber is coming
+23:37:43.501   Customer 0 is coming and checking queue
+23:37:43.501   Customer 0 is getting place in queue
+23:37:43.501   Barber invites customer
+23:37:43.501   Customer 0 is getting haircut
+23:37:43.622   Customer 1 is coming and checking queue
+23:37:43.622   Customer 1 is getting place in queue
+23:37:48.505   Customer 0 is leaving barber shop
+23:37:48.505   Barber is working
+23:37:48.505   Customer 1 is getting haircut
+23:37:53.518   Customer 1 is leaving barber shop
+23:37:53.518   Barber is free
