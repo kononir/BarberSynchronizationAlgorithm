@@ -5,8 +5,8 @@
 
 #define NUMBER_OF_CHAIRS 3
 #define WORKING_TIME 5000
-#define TIME_BETWEEN_CUSTOMERS 1000
-#define MAX_NUMBER_OF_CUSTOMERS 1000
+#define MAX_TIME_BETWEEN_CUSTOMERS 1000
+#define MAX_NUMBER_OF_CUSTOMERS 20
 
 using namespace std;
 
@@ -17,6 +17,8 @@ HANDLE hLogger;
 HANDLE hCurrCustomerN;
 
 int currCustomerN = 0;
+bool* freeFlags;
+//int currentPermitionIndex = 0;
 FILE* stream;
 
 void printTimeStamp()
@@ -31,7 +33,7 @@ void printTimeStamp()
 		timeStamp.wSecond, timeStamp.wMilliseconds);
 }
 
-void logingBarber(const char* text) {
+void logingWithoutParam(const char* text) {
 	WaitForSingleObject(hLogger, INFINITE);
 	printTimeStamp();
 	printf(text);
@@ -39,7 +41,7 @@ void logingBarber(const char* text) {
 	ReleaseMutex(hLogger);
 }
 
-void logingCustomer(const char* text, int customerIndex) {
+void logingWithParam(const char* text, int customerIndex) {
 	WaitForSingleObject(hLogger, INFINITE);
 	printTimeStamp();
 	printf(text, customerIndex);
@@ -52,16 +54,18 @@ unsigned __stdcall barber(void* pArguments) {
 
 	int numOfCustomers = (int)pArguments;
 
-	logingBarber("Barber is coming\n");
+	logingWithoutParam("Barber is coming\n");
 
 	while (true) {
 		WaitForSingleObject(hCurrCustomerN, INFINITE);
 
-		if (currCustomerN == numOfCustomers) {
-			break;
-		}
+		bool allCustomersPassed = currCustomerN == numOfCustomers;
 
 		ReleaseMutex(hCurrCustomerN);
+
+		if (allCustomersPassed) {
+			break;
+		}
 
 
 
@@ -69,38 +73,21 @@ unsigned __stdcall barber(void* pArguments) {
 			continue;
 		}
 		
-		logingBarber("Barber invites customer\n");	
+		logingWithoutParam("Barber invites customer\n");	
 
 
-
-		//WaitForSingleObject(hPermitionsAccess, INFINITE);
 
 		ReleaseMutex(hPermitions[0]);
 		WaitForSingleObject(hPermitions[0], INFINITE);
 
-		//ReleaseMutex(hPermitionsAccess);
 
 
-
-		logingBarber("Barber is working\n");
+		logingWithoutParam("Barber is working\n");
 		Sleep(WORKING_TIME);
 
-		
-
-		//WaitForSingleObject(hPermitionsAccess, INFINITE);
-
-		// сдвиг очереди
-		HANDLE firstPermition = hPermitions[0];
-		for (int permitionIndex = 1; permitionIndex < NUMBER_OF_CHAIRS; permitionIndex++) {
-			hPermitions[permitionIndex - 1] = hPermitions[permitionIndex];
-		};
-		hPermitions[NUMBER_OF_CHAIRS - 1] = firstPermition;
-
-		//ReleaseMutex(hPermitionsAccess);
 
 
-
-		logingBarber("Barber is free\n");
+		logingWithoutParam("Barber is free\n");
 	}
 
 	_endthread();
@@ -110,28 +97,78 @@ unsigned __stdcall barber(void* pArguments) {
 unsigned __stdcall customer(void* pArguments) {
 	int currentIndex = (int)pArguments;
 
-	logingCustomer("Customer %d is coming and checking queue\n", currentIndex);
+	logingWithParam("Customer %d is coming and checking queue\n", currentIndex);
 
-	DWORD decision = WaitForSingleObject(hCustomers, 1000);
+	DWORD decision = WaitForSingleObject(hCustomers, 100);
 
 	switch (decision) {
 		case WAIT_OBJECT_0:
 		{
-			logingCustomer("Customer %d is getting place in queue\n", currentIndex);
+			logingWithParam("Customer %d is getting place in queue\n", currentIndex);
 
 
 
-			WaitForSingleObject(hPermitionsAccess, INFINITE);
+			//WaitForSingleObject(hPermitionsAccess, INFINITE);
 
-			int rezultOfWaiting = (int)WaitForMultipleObjects(NUMBER_OF_CHAIRS, hPermitions, FALSE, INFINITE);	// ошибка с захватом мьютекса, который должен быть уже захвачен парикмахером
-			int permitionIndex = rezultOfWaiting - (int)WAIT_OBJECT_0;
-			ReleaseMutex(hPermitions[permitionIndex]);
-			
-			ReleaseMutex(hPermitionsAccess);
+			//int rezultOfWaiting = (int)WaitForMultipleObjects(NUMBER_OF_CHAIRS, hPermitions, FALSE, INFINITE);	// ошибка с захватом мьютекса, который должен быть уже захвачен парикмахером
+			//int permitionIndex = rezultOfWaiting - (int)WAIT_OBJECT_0;
+
+			int permitionIndex = 0;
+			while (true) {
+				WaitForSingleObject(hPermitionsAccess, INFINITE);
+
+				bool placeIsFree = freeFlags[permitionIndex] == true;
+
+				ReleaseMutex(hPermitionsAccess);
 
 
 
-			logingCustomer("Customer %d is getting haircut\n", currentIndex);
+				if (placeIsFree) {
+					WaitForSingleObject(hPermitionsAccess, INFINITE);
+
+					freeFlags[permitionIndex] = false;
+
+					ReleaseMutex(hPermitionsAccess);
+
+
+
+					WaitForSingleObject(hPermitions[permitionIndex], INFINITE);
+					
+
+
+					WaitForSingleObject(hPermitionsAccess, INFINITE);
+					
+					if (ReleaseMutex(hPermitions[0]) == 0) {
+						cout << "ERROR!!!" << endl;
+					}
+
+					freeFlags[permitionIndex] = true;
+
+
+
+					// сдвиг текущего индекса разрешения
+					HANDLE firstPermition = hPermitions[0];
+					bool firstFlag = freeFlags[0];
+					for (int permitionIndex = 1; permitionIndex < NUMBER_OF_CHAIRS; permitionIndex++) {
+						hPermitions[permitionIndex - 1] = hPermitions[permitionIndex];
+						freeFlags[permitionIndex - 1] = freeFlags[permitionIndex];
+					};
+					hPermitions[NUMBER_OF_CHAIRS - 1] = firstPermition;
+					freeFlags[NUMBER_OF_CHAIRS - 1] = firstFlag;
+
+					//currentPermitionIndex++;
+
+					ReleaseMutex(hPermitionsAccess);
+
+					break;
+				}
+
+				permitionIndex++;
+			}
+
+
+
+			logingWithParam("Customer %d is getting haircut\n", currentIndex);
 			Sleep(WORKING_TIME);
 
 			break;
@@ -139,13 +176,13 @@ unsigned __stdcall customer(void* pArguments) {
 
 		case WAIT_TIMEOUT:
 		{
-			logingCustomer("All chairs are filled\n", currentIndex);
+			logingWithParam("Customer %d find out that chairs are filled\n", currentIndex);
 
 			break;
 		}
 	}
 
-	logingCustomer("Customer %d is leaving barber shop\n", currentIndex);
+	logingWithParam("Customer %d is leaving barber shop\n", currentIndex);
 
 	WaitForSingleObject(hCurrCustomerN, INFINITE);
 	currCustomerN++;
@@ -174,9 +211,11 @@ int main()
 	hCurrCustomerN = CreateMutex(NULL, FALSE, NULL);
 
 	hPermitions = new HANDLE[NUMBER_OF_CHAIRS];
+	freeFlags = new bool[NUMBER_OF_CHAIRS];
 
 	for (int placeIndex = 0; placeIndex < NUMBER_OF_CHAIRS; placeIndex++) {
 		hPermitions[placeIndex] = CreateMutex(NULL, FALSE, NULL);
+		freeFlags[placeIndex] = true;
 	}
 
 	HANDLE hBarber = (HANDLE)_beginthread((_beginthread_proc_type)barber, 0, (void*)numOfCustomers);
@@ -184,8 +223,7 @@ int main()
 	int currCustomerIndex = 0;
 
 	while (currCustomerIndex < numOfCustomers) {
-		Sleep(rand() % TIME_BETWEEN_CUSTOMERS);
-		//Sleep(0);
+		Sleep(rand() % MAX_TIME_BETWEEN_CUSTOMERS);
 		
 		_beginthread((_beginthread_proc_type)customer, 0, (void*)currCustomerIndex);
 
