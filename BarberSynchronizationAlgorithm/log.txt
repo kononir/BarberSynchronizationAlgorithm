@@ -1,0 +1,66 @@
+23:33:30.369   Barber is coming
+23:33:30.529   Customer 0 is coming and checking queue
+23:33:30.530   Customer 0 is getting place in queue
+23:33:30.530   Barber invites customer 0
+23:33:30.530   Customer 0 is getting haircut
+23:33:30.531   Barber is cutting off customer 0
+23:33:30.972   Customer 1 is coming and checking queue
+23:33:30.972   Customer 1 is getting place in queue
+23:33:31.807   Customer 2 is coming and checking queue
+23:33:31.808   Customer 2 is getting place in queue
+23:33:32.762   Customer 3 is coming and checking queue
+23:33:32.763   Customer 3 is getting place in queue
+23:33:32.847   Customer 4 is coming and checking queue
+23:33:32.948   Customer 4 find out that chairs are filled
+23:33:32.949   Customer 5 is coming and checking queue
+23:33:32.950   Customer 4 is leaving barber shop
+23:33:33.014   Customer 6 is coming and checking queue
+23:33:33.050   Customer 5 find out that chairs are filled
+23:33:33.050   Customer 5 is leaving barber shop
+23:33:33.115   Customer 6 find out that chairs are filled
+23:33:33.115   Customer 6 is leaving barber shop
+23:33:33.726   Customer 7 is coming and checking queue
+23:33:33.827   Customer 7 find out that chairs are filled
+23:33:33.827   Customer 7 is leaving barber shop
+23:33:34.719   Customer 8 is coming and checking queue
+23:33:34.821   Customer 8 find out that chairs are filled
+23:33:34.821   Customer 8 is leaving barber shop
+23:33:35.123   Customer 9 is coming and checking queue
+23:33:35.225   Customer 9 find out that chairs are filled
+23:33:35.225   Customer 9 is leaving barber shop
+23:33:35.532   Barber is free
+23:33:35.532   Customer 0 is leaving barber shop
+23:33:35.535   Barber invites customer 1
+23:33:35.535   Customer 1 is getting haircut
+23:33:35.537   Barber is cutting off customer 1
+23:33:35.666   Customer 10 is coming and checking queue
+23:33:35.667   Customer 10 is getting place in queue
+23:33:36.273   Customer 11 is coming and checking queue
+23:33:36.374   Customer 11 find out that chairs are filled
+23:33:36.374   Customer 11 is leaving barber shop
+23:33:37.192   Customer 12 is coming and checking queue
+23:33:37.293   Customer 12 find out that chairs are filled
+23:33:37.293   Customer 12 is leaving barber shop
+23:33:37.502   Customer 13 is coming and checking queue
+23:33:37.604   Customer 13 find out that chairs are filled
+23:33:37.604   Customer 13 is leaving barber shop
+23:33:37.637   Customer 14 is coming and checking queue
+23:33:37.738   Customer 14 find out that chairs are filled
+23:33:37.738   Customer 14 is leaving barber shop
+23:33:40.537   Customer 1 is leaving barber shop
+23:33:40.540   Barber is free
+23:33:40.540   Barber invites customer 2
+23:33:40.541   Customer 2 is getting haircut
+23:33:40.543   Barber is cutting off customer 2
+23:33:45.543   Customer 2 is leaving barber shop
+23:33:45.545   Barber is free
+23:33:45.545   Barber invites customer 3
+23:33:45.547   Customer 3 is getting haircut
+23:33:45.548   Barber is cutting off customer 3
+23:33:50.548   Customer 3 is leaving barber shop
+23:33:50.549   Barber is free
+23:33:50.550   Barber invites customer 10
+23:33:50.551   Customer 10 is getting haircut
+23:33:50.553   Barber is cutting off customer 10
+23:33:55.554   Customer 10 is leaving barber shop
+23:33:55.556   Barber is free

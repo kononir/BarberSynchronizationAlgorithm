@@ -8,7 +8,10 @@
 #define MAX_TIME_BETWEEN_CUSTOMERS 1000
 #define MAX_NUMBER_OF_CUSTOMERS 20
 
-using namespace std;
+typedef struct place {
+	int customerIndex;
+	bool freeFlag;
+} place;
 
 HANDLE hCustomers;
 HANDLE hPermitionsAccess;
@@ -17,9 +20,11 @@ HANDLE hLogger;
 HANDLE hCurrCustomerN;
 
 int currCustomerN = 0;
-bool* freeFlags;
-//int currentPermitionIndex = 0;
+
+place* places;
 FILE* stream;
+
+using namespace std;
 
 void printTimeStamp()
 {
@@ -72,8 +77,10 @@ unsigned __stdcall barber(void* pArguments) {
 		if (!ReleaseSemaphore(hCustomers, 1, NULL)) {
 			continue;
 		}
+
+		int currentIndex = places[0].customerIndex;
 		
-		logingWithoutParam("Barber invites customer\n");	
+		logingWithParam("Barber invites customer %d\n", currentIndex);
 
 
 
@@ -82,7 +89,7 @@ unsigned __stdcall barber(void* pArguments) {
 
 
 
-		logingWithoutParam("Barber is working\n");
+		logingWithParam("Barber is cutting off customer %d\n", currentIndex);
 		Sleep(WORKING_TIME);
 
 
@@ -108,16 +115,11 @@ unsigned __stdcall customer(void* pArguments) {
 
 
 
-			//WaitForSingleObject(hPermitionsAccess, INFINITE);
-
-			//int rezultOfWaiting = (int)WaitForMultipleObjects(NUMBER_OF_CHAIRS, hPermitions, FALSE, INFINITE);	// ошибка с захватом мьютекса, который должен быть уже захвачен парикмахером
-			//int permitionIndex = rezultOfWaiting - (int)WAIT_OBJECT_0;
-
 			int permitionIndex = 0;
 			while (true) {
 				WaitForSingleObject(hPermitionsAccess, INFINITE);
 
-				bool placeIsFree = freeFlags[permitionIndex] == true;
+				bool placeIsFree = places[permitionIndex].freeFlag == true;
 
 				ReleaseMutex(hPermitionsAccess);
 
@@ -126,7 +128,8 @@ unsigned __stdcall customer(void* pArguments) {
 				if (placeIsFree) {
 					WaitForSingleObject(hPermitionsAccess, INFINITE);
 
-					freeFlags[permitionIndex] = false;
+					places[permitionIndex].freeFlag = false;
+					places[permitionIndex].customerIndex = currentIndex;
 
 					ReleaseMutex(hPermitionsAccess);
 
@@ -142,21 +145,21 @@ unsigned __stdcall customer(void* pArguments) {
 						cout << "ERROR!!!" << endl;
 					}
 
-					freeFlags[permitionIndex] = true;
+					places[permitionIndex].freeFlag = true;
 
 
 
 					// сдвиг текущего индекса разрешения
 					HANDLE firstPermition = hPermitions[0];
-					bool firstFlag = freeFlags[0];
+					place firstPlace = places[0];
 					for (int permitionIndex = 1; permitionIndex < NUMBER_OF_CHAIRS; permitionIndex++) {
 						hPermitions[permitionIndex - 1] = hPermitions[permitionIndex];
-						freeFlags[permitionIndex - 1] = freeFlags[permitionIndex];
+						places[permitionIndex - 1] = places[permitionIndex];
 					};
 					hPermitions[NUMBER_OF_CHAIRS - 1] = firstPermition;
-					freeFlags[NUMBER_OF_CHAIRS - 1] = firstFlag;
+					places[NUMBER_OF_CHAIRS - 1] = firstPlace;
 
-					//currentPermitionIndex++;
+
 
 					ReleaseMutex(hPermitionsAccess);
 
@@ -211,11 +214,11 @@ int main()
 	hCurrCustomerN = CreateMutex(NULL, FALSE, NULL);
 
 	hPermitions = new HANDLE[NUMBER_OF_CHAIRS];
-	freeFlags = new bool[NUMBER_OF_CHAIRS];
+	places = new place[NUMBER_OF_CHAIRS];
 
 	for (int placeIndex = 0; placeIndex < NUMBER_OF_CHAIRS; placeIndex++) {
 		hPermitions[placeIndex] = CreateMutex(NULL, FALSE, NULL);
-		freeFlags[placeIndex] = true;
+		places[placeIndex] = { 0, true };
 	}
 
 	HANDLE hBarber = (HANDLE)_beginthread((_beginthread_proc_type)barber, 0, (void*)numOfCustomers);
