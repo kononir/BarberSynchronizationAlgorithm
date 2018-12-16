@@ -91,7 +91,7 @@ unsigned __stdcall barber(void* pArguments) {
 
 		// сдвиг очереди
 		HANDLE firstPermition = hPermitions[0];
-		for (int permitionIndex = 1; permitionIndex > NUMBER_OF_CHAIRS; permitionIndex++) {
+		for (int permitionIndex = 1; permitionIndex < NUMBER_OF_CHAIRS; permitionIndex++) {
 			hPermitions[permitionIndex - 1] = hPermitions[permitionIndex];
 		};
 		hPermitions[NUMBER_OF_CHAIRS - 1] = firstPermition;
@@ -185,6 +185,7 @@ int main()
 
 	while (currCustomerIndex < numOfCustomers) {
 		Sleep(rand() % TIME_BETWEEN_CUSTOMERS);
+		//Sleep(0);
 		
 		_beginthread((_beginthread_proc_type)customer, 0, (void*)currCustomerIndex);
 
