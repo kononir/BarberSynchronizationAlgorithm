@@ -145,7 +145,7 @@ unsigned __stdcall customer(void* pArguments) {
 						cout << "ERROR!!!" << endl;
 					}
 
-					places[permitionIndex].freeFlag = true;
+					places[0].freeFlag = true;
 
 
 
@@ -200,7 +200,7 @@ int main()
 	int numOfCustomers;
 
 	do {
-		cout << "Input number of customers: ";
+		cout << "Input number of customers (max - " << MAX_NUMBER_OF_CUSTOMERS <<"): ";
 		cin >> numOfCustomers;
 	} while (numOfCustomers > MAX_NUMBER_OF_CUSTOMERS);
 
@@ -237,6 +237,8 @@ int main()
 
 	CloseHandle(hCustomers);
 	CloseHandle(hPermitionsAccess);
+
+	fclose(stream);
 
 	system("pause");
 
