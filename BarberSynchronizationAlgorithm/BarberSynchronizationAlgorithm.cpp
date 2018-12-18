@@ -6,7 +6,7 @@
 #define NUMBER_OF_CHAIRS 3
 #define WORKING_TIME 5000
 #define WAITING_TIME 100
-#define MAX_TIME_BETWEEN_CUSTOMERS 1000
+#define MAX_TIME_BETWEEN_CUSTOMERS 3000
 #define MAX_NUMBER_OF_CUSTOMERS 50
 #define MIN_NUMBER_OF_CUSTOMERS 0
 
@@ -73,25 +73,26 @@ unsigned __stdcall barber(void* pArguments) {
 	logingWithoutParams("Barber is coming\n");
 
 	while (true) {
-		Sleep(WAITING_TIME);
+		// Данная задержка нужна для того, чтобы посетитель успел перехватить разрешение на стрижку 
+		// (без него после выдачи разрешения парикмахером его будет тут же перехватывать сам парикмахер) 
+		Sleep(WAITING_TIME); 
 
+		//-----------------Проверяем все ли посетители прошли----------------------------------------------//
 		WaitForSingleObject(hCurrNumberOfPassedCustomers, INFINITE);
 
 		bool allCustomersPassed = currNumberOfPassedCustomers == numOfCustomers;
 
 		ReleaseMutex(hCurrNumberOfPassedCustomers);
 
+		//-----------------Если все посетители прошли - выходим из цикла-----------------------------------//
 		if (allCustomersPassed) {
 			break;
 		}
 
-
-
+		//-----------------Если в очереди нет клиентов, то возвращаемся к началу цикла---------------------//
 		if (!ReleaseSemaphore(hCustomers, 1, NULL)) {
 			continue;
 		}
-
-
 
 		WaitForSingleObject(hPermitionsAccess, INFINITE);
 
@@ -99,18 +100,13 @@ unsigned __stdcall barber(void* pArguments) {
 
 		ReleaseMutex(hPermitionsAccess);
 
-
-
 		logingWithOneParam("Barber invites customer %d\n", currentIndex);
-
 		ReleaseMutex(hPermitions[0]);
 		WaitForSingleObject(hPermitions[0], INFINITE);
 
-
-
 		WaitForSingleObject(hPermitionsAccess, INFINITE);
 
-		//-----------------Сдвигаем очередь-----------------------------------//
+		//-----------------Сдвигаем очередь, освобождаем место-----------------------------------//
 		HANDLE firstPermition = hPermitions[0];
 		place firstPlace = places[0];
 		for (int permitionIndex = 1; permitionIndex < NUMBER_OF_CHAIRS; permitionIndex++) {
@@ -126,15 +122,13 @@ unsigned __stdcall barber(void* pArguments) {
 
 		ReleaseMutex(hPermitionsAccess);
 
-
-
 		logingWithOneParam("Barber is cutting off customer %d\n", currentIndex);
 		Sleep(WORKING_TIME);
 
-
-
 		logingWithoutParams("Barber is free\n");
 	}
+
+	logingWithoutParams("Barber is leaving barber shop\n");
 
 	_endthread();
 	return 0;
@@ -158,11 +152,9 @@ unsigned __stdcall customer(void* pArguments) {
 			ReleaseMutex(hPermitionsAccess);
 
 			if (enoughtChairs) {
-				logingWithOneParam("Customer %d is searching free place in queue\n", currentIndex);
-
-				//-----------------Ищем место в очереди-------------------------------//
 				WaitForSingleObject(hPermitionsAccess, INFINITE);
 
+				logingWithOneParam("Customer %d is searching free place in queue\n", currentIndex);
 				int permitionIndex = 0;
 				while (true) {
 					bool placeIsFree = places[permitionIndex].freeFlag == true;
@@ -175,18 +167,15 @@ unsigned __stdcall customer(void* pArguments) {
 				}
 
 				logingWithTwoParams("Customer %d is getting place %d in queue\n", currentIndex, permitionIndex);
-
-				//-----------------Занимаем место в очереди---------------------------//
 				places[permitionIndex].freeFlag = false;
 				places[permitionIndex].customerIndex = currentIndex;
 
 				ReleaseMutex(hPermitionsAccess);
 
-				//-----------------Ждём разрешения на стрижку-------------------------//
+				logingWithOneParam("Customer %d is waiting permition to haircut\n", currentIndex);
 				WaitForSingleObject(hPermitions[permitionIndex], INFINITE);
 				ReleaseMutex(hPermitions[0]);
 
-				//-----------------Стрижёмся------------------------------------------//
 				logingWithOneParam("Customer %d is getting haircut\n", currentIndex);
 				Sleep(WORKING_TIME);
 
